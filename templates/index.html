@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC Camera Stream</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .video-container {
+            margin: 20px 0;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #video {
+            width: 640px;
+            height: 480px;
+            background-color: #000;
+            margin: 0 auto;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.error {
+            display: block;
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status.success {
+            display: block;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC Camera Stream</h1>
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+        <div class="controls">
+            <button id="start">开始</button>
+            <button id="stop" disabled>停止</button>
+        </div>
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('video');
+        const startButton = document.getElementById('start');
+        const stopButton = document.getElementById('stop');
+        const statusElement = document.getElementById('status');
+        let peerConnection = null;
+
+        function showStatus(message, isError = false) {
+            statusElement.textContent = message;
+            statusElement.className = 'status ' + (isError ? 'error' : 'success');
+        }
+
+        async function start() {
+            try {
+                const configuration = {
+                    iceServers: [{
+                        urls: [
+                            'stun:stun.l.google.com:19302',
+                            'stun:stun1.l.google.com:19302'
+                        ]
+                    }]
+                };
+
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // 处理ICE候选
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        console.log("New ICE candidate:", event.candidate);
+                    }
+                };
+
+                // 处理连接状态变化
+                peerConnection.onconnectionstatechange = () => {
+                    console.log("Connection state:", peerConnection.connectionState);
+                    if (peerConnection.connectionState === 'connected') {
+                        showStatus('连接成功！');
+                    }
+                };
+
+                // 处理视频流
+                peerConnection.ontrack = event => {
+                    if (event.streams && event.streams[0]) {
+                        videoElement.srcObject = event.streams[0];
+                    }
+                };
+
+                // 创建空的视频轨道接收器
+                peerConnection.addTransceiver('video', {direction: 'recvonly'});
+
+                // 创建offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // 发送offer到服务器
+                const response = await fetch('/offer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sdp: offer.sdp,
+                        type: offer.type,
+                    }),
+                });
+
+                const answer = await response.json();
+                await peerConnection.setRemoteDescription(answer);
+
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                showStatus('正在连接...');
+            } catch (e) {
+                console.error(e);
+                showStatus('连接失败: ' + e.toString(), true);
+                stop();
+            }
+        }
+
+        async function stop() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            videoElement.srcObject = null;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            showStatus('已断开连接');
+        }
+
+        startButton.addEventListener('click', start);
+        stopButton.addEventListener('click', stop);
+
+        // 页面关闭时清理资源
+        window.addEventListener('beforeunload', stop);
+    </script>
+</body>
+</html>
