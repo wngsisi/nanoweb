@@ -27,9 +27,9 @@ class CameraVideoStreamTrack(MediaStreamTrack):
             if not self.cap.isOpened():
 
                 self.cap = cv2.VideoCapture(0)
-            
+
             if not self.cap.isOpened():
-                raise Exception("无法打开摄像头")
+                raise Exception("Cannot open camera")
 
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -37,11 +37,11 @@ class CameraVideoStreamTrack(MediaStreamTrack):
 
             ret, frame = self.cap.read()
             if not ret or frame is None:
-                raise Exception("无法读取摄像头画面")
-                
-            print("摄像头初始化成功")
+                raise Exception("cannot read camera frame")
+
+            print("Camera initialized successfully")
         except Exception as e:
-            print(f"摄像头初始化失败: {str(e)}")
+            print(f"Camera initialization failed: {str(e)}")
             raise
 
     async def next_timestamp(self):
@@ -55,11 +55,11 @@ class CameraVideoStreamTrack(MediaStreamTrack):
         try:
             ret, frame = self.cap.read()
             if not ret or frame is None:
-                print("无法读取摄像头画面")
+                print("Cannot read camera frame")
                 return None
 
             if frame.size == 0:
-                print("读取到空帧")
+                print("Empty frame")
                 return None
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -70,7 +70,7 @@ class CameraVideoStreamTrack(MediaStreamTrack):
 
             return new_frame
         except Exception as e:
-            print(f"处理视频帧时出错: {str(e)}")
+            print(f"Error processing video frame: {str(e)}")
             return None
 
     def stop(self):
