@@ -15,17 +15,17 @@ pcs = set()
 relay = None
 
 class CameraVideoStreamTrack(MediaStreamTrack):
-    """摄像头视频流轨道"""
+
     kind = "video"
 
     def __init__(self):
         super().__init__()
         self._timestamp = 0
         try:
-            # 尝试使用DirectShow后端打开摄像头
+
             self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
             if not self.cap.isOpened():
-                # 如果DirectShow失败，尝试默认方式
+
                 self.cap = cv2.VideoCapture(0)
             
             if not self.cap.isOpened():
@@ -60,15 +60,11 @@ class CameraVideoStreamTrack(MediaStreamTrack):
                 print("无法读取摄像头画面")
                 return None
 
-            # 确保帧不为空
             if frame.size == 0:
                 print("读取到空帧")
                 return None
-
-            # 转换为RGB格式
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # 创建VideoFrame
+
             pts, time_base = await self.next_timestamp()
             new_frame = VideoFrame.from_ndarray(frame, format="rgb24")
             new_frame.pts = pts
@@ -101,7 +97,6 @@ async def offer(request):
             await pc.close()
             pcs.discard(pc)
 
-    # 添加视频轨道
     video = cv2.imread(img)
     pc.addTrack(video)
 
