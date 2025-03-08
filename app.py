@@ -10,7 +10,7 @@ from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRelay
 import fractions
 import time
 from NANOapp import img
-# 全局变量
+
 pcs = set()
 relay = None
 
@@ -30,13 +30,11 @@ class CameraVideoStreamTrack(MediaStreamTrack):
             
             if not self.cap.isOpened():
                 raise Exception("无法打开摄像头")
-                
-            # 设置摄像头参数
+
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self.cap.set(cv2.CAP_PROP_FPS, 30)
-            
-            # 读取一帧测试
+
             ret, frame = self.cap.read()
             if not ret or frame is None:
                 raise Exception("无法读取摄像头画面")
@@ -113,7 +111,6 @@ async def offer(request):
     )
 
 async def on_shutdown(app):
-    # 关闭所有连接
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()
