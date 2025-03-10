@@ -95,7 +95,7 @@ async def offer(request):
             await pc.close()
             pcs.discard(pc)
 
-    video = cv2.imread(img)
+    video = CameraVideoStreamTrack()
     pc.addTrack(video)
 
     await pc.setRemoteDescription(offer)
@@ -120,7 +120,6 @@ if __name__ == "__main__":
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_post("/offer", offer)
-    app.router.add_static('/static', 'static')
 
     port = 8080
     print(f"Starting WebRTC server at http://localhost:{port}")
