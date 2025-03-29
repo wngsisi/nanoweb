@@ -2,15 +2,11 @@ import asyncio
 import json
 import os
 import cv2
-import numpy as np
 from aiohttp import web
 from av import VideoFrame
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaBlackhole, MediaPlayer, MediaRelay
 import fractions
 import time
-from NANOapp import img
-
 pcs = set()
 relay = None
 
@@ -23,10 +19,9 @@ class CameraVideoStreamTrack(MediaStreamTrack):
         self._timestamp = 0
         try:
 
-            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            self.cap = cv2.VideoCapture('rtsp://admin:123456@192.168.1.102:554/h264/ch1/sub/av_stream')
             if not self.cap.isOpened():
-
-                self.cap = cv2.VideoCapture(0)
+                raise Exception("Cannot open RTSP")
 
             if not self.cap.isOpened():
                 raise Exception("Cannot open camera")
@@ -36,6 +31,7 @@ class CameraVideoStreamTrack(MediaStreamTrack):
             self.cap.set(cv2.CAP_PROP_FPS, 30)
 
             ret, frame = self.cap.read()
+
             if not ret or frame is None:
                 raise Exception("cannot read camera frame")
 
@@ -54,6 +50,7 @@ class CameraVideoStreamTrack(MediaStreamTrack):
     async def recv(self):
         try:
             ret, frame = self.cap.read()
+
             if not ret or frame is None:
                 print("Cannot read camera frame")
                 return None
@@ -62,7 +59,9 @@ class CameraVideoStreamTrack(MediaStreamTrack):
                 print("Empty frame")
                 return None
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
+            h, w, c = frame.shape
+            cv2.line(frame, (w // 2, 0), (w // 2, h), (255, 0, 255), 3)
+            cv2.line(frame, (0, h // 2), (w, h // 2), (255, 0, 255), 3)
             pts, time_base = await self.next_timestamp()
             new_frame = VideoFrame.from_ndarray(frame, format="rgb24")
             new_frame.pts = pts
@@ -120,8 +119,8 @@ if __name__ == "__main__":
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_post("/offer", offer)
+    #app.router.add_static('/static', 'static')
 
     port = 8080
     print(f"Starting WebRTC server at http://localhost:{port}")
     web.run_app(app, host='0.0.0.0', port=port)
-
